@@ -339,9 +339,21 @@ function showAdminDevice(devID) {
 ${dev && dev.salida && dev.salida.nombre ? "Nombre: " + dev.salida.nombre : "Sin registros"}<br>
 ${dev && dev.salida && dev.salida.direccion ? "Dirección: " + dev.salida.direccion : ""}
       <br><b>Estado actual:</b> <span style="color:${dev && dev.salida && dev.salida.estado ? 'green':'red'}">${dev && dev.salida && dev.salida.estado ? 'ACTIVADA':'DESACTIVADA'}</span>
+    <br>
+  <button id="admin-salida-btn">${dev && dev.salida && dev.salida.estado ? 'Desactivar' : 'Activar'} salida</button>
     `);
-
-    // --- Botón solicitudes (solo se crea una vez)
+    // Activar/desactivar Salida
+    qs("#admin-salida-btn").onclick = async () => {
+  const estadoNuevo = !(dev && dev.salida && dev.salida.estado);
+  await db.ref("dispositivos/" + devID + "/relay1").set(estadoNuevo);
+  await db.ref("dispositivos/" + devID + "/salida").set({
+    estado: estadoNuevo,
+    nombre: userData && userData.nombre ? userData.nombre : currentUser.email,
+    direccion: userData && userData.direccion ? userData.direccion : "",
+    timestamp: Date.now()
+  });
+};
+// --- Botón solicitudes (solo se crea una vez)
     if (!qs("#view-requests-btn")) {
       const btn = document.createElement("button");
       btn.id = "view-requests-btn";
