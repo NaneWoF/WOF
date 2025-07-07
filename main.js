@@ -618,7 +618,7 @@ qs("#toggleRegisterPassword").onclick = () => {
   }
 };
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./firebase-messaging-sw.js", { scope: './' })
+  navigator.serviceWorker.register("firebase-messaging-sw.js", { scope: './' })
     .then((registration) => {
       console.log("Service Worker registrado:", registration);
       // si usas firebase.messaging() con compat:
