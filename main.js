@@ -148,21 +148,49 @@ async function loadUserData() {
   const dispositivosSnap = await db.ref("dispositivos").once("value");
   const dispositivos = dispositivosSnap.val() || {};
 
-  for (const devID of Object.keys(dispositivos)) {
-    const dev = dispositivos[devID];
-
-    if (dev.usuarios && dev.usuarios[emailKey]) {
-      currentDevice = devID;
-      found = true;
-      break;
-    }
-
-    if (dev.admin === emailKey) {
-      currentDevice = devID;
-      found = true;
-      break;
-    }
+  let userDevices = [];
+for (const devID of Object.keys(dispositivos)) {
+  const dev = dispositivos[devID];
+  if (dev.usuarios && dev.usuarios[emailKey]) {
+    userDevices.push(devID);
   }
+  if (dev.admin === emailKey) {
+    userDevices.push(devID);
+  }
+}
+
+if (userDevices.length === 1) {
+  currentDevice = userDevices[0];
+  // sigue verificación normal
+  verificarAcceso(emailKey); 
+} else if (userDevices.length > 1) {
+  // construir selector
+  let options = "";
+  userDevices.forEach(did => {
+    options += `<option value="${did}">${did}</option>`;
+  });
+  setText("#auth-section", `
+    <h2>Selecciona el dispositivo</h2>
+    <select id="user-device-select">${options}</select>
+    <button id="confirm-user-device">Continuar</button>
+  `);
+  show("#auth-section");
+  qs("#confirm-user-device").onclick = () => {
+    currentDevice = qs("#user-device-select").value;
+    verificarAcceso(emailKey);
+  };
+} else {
+  currentDevice = null;
+  // mostrar mensaje de no asociado
+  hide("#login-form");
+  hide("#register-form");
+  show("#auth-message");
+  qs("#auth-message").innerHTML = `
+    <h2>No tienes dispositivos asociados.<br>Pide a tu administrador que te agregue.</h2>
+    <button id="logout-btn-auth" class="danger">Cerrar sesión</button>
+  `;
+  qs("#logout-btn-auth").onclick = () => auth.signOut();
+}
 
   if (found) {
     // ¿Es admin?
