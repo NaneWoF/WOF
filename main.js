@@ -600,7 +600,7 @@ qs("#toggleRegisterPassword").onclick = () => {
   }
 };
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/notificaciones-push.js")
+  navigator.serviceWorker.register("/firebase-messaging-compat.js")
     .then((registration) => {
       console.log("Service Worker registrado:", registration);
       messaging.useServiceWorker(registration);
