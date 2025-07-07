@@ -618,9 +618,11 @@ qs("#toggleRegisterPassword").onclick = () => {
   }
 };
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/WOF/firebase-messaging-sw.js")
+  navigator.serviceWorker.register("./firebase-messaging-sw.js", { scope: './' })
     .then((registration) => {
       console.log("Service Worker registrado:", registration);
+      // si usas firebase.messaging() con compat:
+      // messaging.useServiceWorker(registration);  // (opcional) si te marca error, elimínalo
     })
     .catch((err) => {
       console.error("Error registrando Service Worker:", err);
