@@ -10,6 +10,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
+const messaging = firebase.messaging();
 
 // Utilidades DOM
 const qs = sel => document.querySelector(sel);
@@ -598,3 +599,13 @@ qs("#toggleRegisterPassword").onclick = () => {
     qs("#toggleRegisterPassword").textContent = "👁️";
   }
 };
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/notificaciones-push.js")
+    .then((registration) => {
+      console.log("Service Worker registrado:", registration);
+      messaging.useServiceWorker(registration);
+    })
+    .catch((err) => {
+      console.error("Error registrando Service Worker:", err);
+    });
+}
