@@ -123,7 +123,25 @@ auth.onAuthStateChanged(async user => {
 
   if (user) {
     currentUser = user;
-    await loadUserData();  // la función completa incluye todo el chequeo
+    await loadUserData();
+
+    // Solicitar token notificaciones SOLO si está autenticado
+    try {
+      const permiso = await Notification.requestPermission();
+      if (permiso === "granted") {
+        const token = await messaging.getToken({
+          vapidKey: "BAaxSJxnH2M0KddgqZMnnxZ-ZptG9RZ52Hm0muHXLkC8meQ2RM9XvriUKkH4ja73sTUpV_VQq2PdYrB5aXMpoOY"
+        });
+        console.log("Token FCM:", token);
+        const emailKey = currentUser.email.replace(/\./g, "_");
+        await db.ref("usuarios/" + emailKey + "/fcmToken").set(token);
+      } else {
+        console.log("Permiso de notificaciones denegado");
+      }
+    } catch (err) {
+      console.error("Error solicitando token FCM", err);
+    }
+
   } else {
     show("#auth-section");
     hide("#user-panel");
@@ -609,24 +627,6 @@ if ("serviceWorker" in navigator) {
       console.error("Error registrando Service Worker:", err);
     });
 }
-// Pide permiso al usuario
-messaging.requestPermission()
-  .then(() => {
-    console.log("Permiso de notificaciones concedido");
-    return messaging.getToken({ vapidKey: "BAaxSJxnH2M0KddgqZMnnxZ-ZptG9RZ52Hm0muHXLkC8meQ2RM9XvriUKkH4ja73sTUpV_VQq2PdYrB5aXMpoOY" });
-  })
-  .then((token) => {
-    console.log("Token FCM:", token);
-    // Aquí podrías guardar este token en tu base de datos
-    // asociado al usuario logueado, por ejemplo:
-    if (currentUser) {
-      const emailKey = currentUser.email.replace(/\./g, "_");
-      db.ref("usuarios/" + emailKey + "/fcmToken").set(token);
-    }
-  })
-  .catch((err) => {
-    console.error("Error obteniendo permiso o token FCM:", err);
-  });
 messaging.onMessage((payload) => {
   console.log("Notificación recibida en primer plano:", payload);
   alert("🔔 Notificación: " + payload.notification.title + "\n" + payload.notification.body);
