@@ -137,6 +137,7 @@ auth.onAuthStateChanged(async user => {
     switchAuth(true);
   }
 });
+// --- Load user data and show panel ---
 async function loadUserData() {
   if (!currentUser) return;
 
@@ -148,7 +149,6 @@ async function loadUserData() {
 
   for (const devID of Object.keys(dispositivos)) {
     const dev = dispositivos[devID];
-
     if (dev.usuarios && dev.usuarios[emailKey]) {
       userDevices.push(devID);
     }
@@ -158,7 +158,7 @@ async function loadUserData() {
   }
 
   if (userDevices.length === 0) {
-    // revisar si tiene solicitudes pendientes
+    // revisar solicitudes pendientes
     const pendSnap = await db.ref("solicitudesPendientes").once("value");
     const pendData = pendSnap.val() || {};
     let pendiente = false;
@@ -189,7 +189,15 @@ async function loadUserData() {
     return;
   }
 
-  // usuario tiene dispositivos: generar selector
+  // ¿es admin de algún dispositivo?
+  const adminSnap = await db.ref("dispositivos").orderByChild("admin").equalTo(emailKey).once("value");
+  if (adminSnap.exists()) {
+    isAdmin = true;
+    showAdminPanel(adminSnap.val());
+    return;
+  }
+
+  // no es admin, mostrar panel usuario con selector
   let options = "";
   userDevices.forEach(did => {
     options += `<option value="${did}">${did}</option>`;
@@ -212,7 +220,6 @@ async function loadUserData() {
   };
   qs("#logout-btn").onclick = () => auth.signOut();
 }
-
 // --- Panel usuario ---
 let salidaListener = null;
 
