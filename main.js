@@ -137,81 +137,31 @@ auth.onAuthStateChanged(async user => {
     switchAuth(true);
   }
 });
-// --- Load user data and show panel ---
 async function loadUserData() {
   if (!currentUser) return;
 
   const emailKey = currentUser.email.replace(/\./g, "_");
-  let found = false;
+  let userDevices = [];
 
-  // buscar en dispositivos donde sea usuario o admin
   const dispositivosSnap = await db.ref("dispositivos").once("value");
   const dispositivos = dispositivosSnap.val() || {};
 
-  let userDevices = [];
-for (const devID of Object.keys(dispositivos)) {
-  const dev = dispositivos[devID];
-  if (dev.usuarios && dev.usuarios[emailKey]) {
-    userDevices.push(devID);
-  }
-  if (dev.admin === emailKey) {
-    userDevices.push(devID);
-  }
-}
+  for (const devID of Object.keys(dispositivos)) {
+    const dev = dispositivos[devID];
 
-if (userDevices.length === 1) {
-  currentDevice = userDevices[0];
-  // sigue verificación normal
-  verificarAcceso(emailKey); 
-} else if (userDevices.length > 1) {
-  // construir selector
-  let options = "";
-  userDevices.forEach(did => {
-    options += `<option value="${did}">${did}</option>`;
-  });
-  setText("#auth-section", `
-    <h2>Selecciona el dispositivo</h2>
-    <select id="user-device-select">${options}</select>
-    <button id="confirm-user-device">Continuar</button>
-  `);
-  show("#auth-section");
-  qs("#confirm-user-device").onclick = () => {
-    currentDevice = qs("#user-device-select").value;
-    verificarAcceso(emailKey);
-  };
-} else {
-  currentDevice = null;
-  // mostrar mensaje de no asociado
-  hide("#login-form");
-  hide("#register-form");
-  show("#auth-message");
-  qs("#auth-message").innerHTML = `
-    <h2>No tienes dispositivos asociados.<br>Pide a tu administrador que te agregue.</h2>
-    <button id="logout-btn-auth" class="danger">Cerrar sesión</button>
-  `;
-  qs("#logout-btn-auth").onclick = () => auth.signOut();
-}
-
-  if (found) {
-    // ¿Es admin?
-    const adminDevSnap = await db
-      .ref("dispositivos")
-      .orderByChild("admin")
-      .equalTo(emailKey)
-      .once("value");
-
-    if (adminDevSnap.exists()) {
-      isAdmin = true;
-      showAdminPanel(adminDevSnap.val());
-    } else {
-      isAdmin = false;
-      showUserPanel();
+    if (dev.usuarios && dev.usuarios[emailKey]) {
+      userDevices.push(devID);
     }
-  } else {
-    // revisar solicitudes pendientes
-    let pendiente = false;
+    if (dev.admin === emailKey) {
+      userDevices.push(devID);
+    }
+  }
+
+  if (userDevices.length === 0) {
+    // revisar si tiene solicitudes pendientes
     const pendSnap = await db.ref("solicitudesPendientes").once("value");
     const pendData = pendSnap.val() || {};
+    let pendiente = false;
 
     Object.keys(pendData).forEach(devID => {
       if (pendData[devID] && pendData[devID][emailKey]) pendiente = true;
@@ -236,48 +186,33 @@ if (userDevices.length === 1) {
       `;
       qs("#logout-btn-auth").onclick = () => auth.signOut();
     }
+    return;
   }
-}
- // ¿Es admin de algún dispositivo?
-async function verificarAcceso() {
-  const dispositivosSnap = await db.ref("dispositivos").orderByChild("admin").equalTo(emailKey).once("value");
-  if (dispositivosSnap.exists()) {
-    isAdmin = true;
-    showAdminPanel(dispositivosSnap.val());
-  } else if (currentDevice) {
-    isAdmin = false;
-    showUserPanel();
-  } else {
-    // ¿Pendiente de aprobación?
-    // Buscar si tiene una solicitud pendiente en solicitudesPendientes
-    let pendiente = false;
-    const pendSnap = await db.ref("solicitudesPendientes/" + currentDevice).once("value");
-    const pendData = pendSnap.val() || {};
-    Object.keys(pendData).forEach(devID => {
-      if (pendData[devID][emailKey]) pendiente = true;
-    });
 
-    if (pendiente) {
-      hide("#login-form");
-hide("#register-form");
-show("#auth-message");
-qs("#auth-message").innerHTML = `
-  <h2>Tu acceso está pendiente de aprobación por el administrador.</h2>
-  <button id="logout-btn-auth" class="danger">Cerrar sesión</button>
-`;
-qs("#logout-btn-auth").onclick = () => auth.signOut();
-    } else {
-      hide("#login-form");
-hide("#register-form");
-show("#auth-message");
-qs("#auth-message").innerHTML = `
-  <h2>No tienes dispositivos asociados.<br>Pide a tu administrador que te agregue.</h2>
-  <button id="logout-btn-auth" class="danger">Cerrar sesión</button>
-`;
-qs("#logout-btn-auth").onclick = () => auth.signOut();
-    }
-  }
+  // usuario tiene dispositivos: generar selector
+  let options = "";
+  userDevices.forEach(did => {
+    options += `<option value="${did}">${did}</option>`;
+  });
+
+  setText("#user-panel", `
+    <select id="user-device-list">${options}</select>
+    <div id="user-status"></div>
+    <div id="user-controls"></div>
+    <button id="logout-btn">Cerrar sesión</button>
+  `);
+
+  show("#user-panel");
+  currentDevice = userDevices[0];
+  showUserPanel();
+
+  qs("#user-device-list").onchange = e => {
+    currentDevice = e.target.value;
+    showUserPanel();
+  };
+  qs("#logout-btn").onclick = () => auth.signOut();
 }
+
 // --- Panel usuario ---
 let salidaListener = null;
 
